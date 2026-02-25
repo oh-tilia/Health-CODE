@@ -1,8 +1,8 @@
 #File for loading the dataset
 
 #Get necessary files and set them to variables
-label_file = ""
-dataset_file = ""
+label_file = "labels.csv"
+dataset_file = "ds_5_cancer.csv"
 
 #Load Labels for the dataset
 df_labels <- read.csv2(label_file, sep = ",")
@@ -11,7 +11,7 @@ df_labels <- read.csv2(label_file, sep = ",")
 row_list <- df_labels$X
 
 #Load dataset with row names set as labels
-df_data <- read.csv2("data.csv", sep = ",",row.names = row_list)
+df_data <- read.csv2(dataset_file, sep = ",",row.names = row_list)
 df_data$X <- NULL
 
 #Add the types of tumor to the dataset to sort later
@@ -23,7 +23,7 @@ names(df_final)[names(df_final) == "df_labels$Class"] <-"Tumor_type"
 df_BRCA <- df_final[df_final$Tumor_type == 'BRCA',]
 
 #Export dataframe as csv 
-output_name = "test"
+output_name = "test.csv"
 write.csv(df_BRCA,output_name)
 
 #Import dataset to check if it corectly exported
