@@ -16,13 +16,21 @@ df_BRCA <- read.csv2(dataset)
 values <- colSums(is.na(df_BRCA))
 check_missing <- data.frame(values)
 
+check_missing$values[15]
+
 sample_names <- row.names(check_missing)
-for(i in range(length(check_missing$values))){
-  print(check_missing$values[i])
+
+count <-0
+
+for(i in (1:length(check_missing$values))){
   if(check_missing$values[i] !=0){
-    print("Value missing in:",sample_names[i])
-  }else {print("There are no missing values")
-  }
+    print("Value missing in:")
+    print(sample_names[i])
+    count <- count+1
+      }
+}
+if(count == 0){
+  print("NO MISSING VALUES")
 }
 
 #checks for duplicate data in the name of the gene
