@@ -57,7 +57,7 @@ scaled_X <- scale(X_t)
 pca_result <- prcomp(scaled_X)
 
 #Extract principal components for each observation
-pca_data <- as.data.frame(pca_result$x[,1:2])
+pca_data <- as.data.frame(pca_result$x[,1:4])
 pca_data$Sample <- rownames(pca_data)
 
 #Groups
@@ -80,7 +80,19 @@ ggplot(pca_data, aes(x = PC1, y = PC2, color = CellLine, shape = Treatment)) +
   ) +
   theme_minimal()
 
-#------------------------HEATMAP-----------------------------------------------
+
+#PCA 2
+ggplot(pca_data, aes(x = PC3, y = PC4, color = CellLine, shape = Treatment)) +
+  geom_point(size = 4) +
+  geom_text_repel(aes(label = Sample), size = 3) +
+  labs(
+    title = "PCA of RNA-seq Data",
+    x = paste0("PC1 (", round(var_explained[1]*100,2), "% variance)"),
+    y = paste0("PC2 (", round(var_explained[2]*100,2), "% variance)")
+  ) +
+  theme_minimal()
+
+#------------------------------------HEATMAP------------------------------------
 
 annotation_col <- data.frame(CellLine = pca_data$CellLine,
                              Treatment = pca_data$Treatment)
@@ -94,3 +106,72 @@ pheatmap(X_filtered,
          cluster_cols = TRUE,
          cluster_rows = TRUE,
          main = "Top 2000 variable genes Heatmap")
+
+
+#-----------------------------PCA DRIVERS---------------------------------------
+
+# Charger les packages nécessaires
+library(ggplot2)
+library(tidyverse)
+library("FactoMineR")
+library("factoextra")
+
+# run PCA prompt
+# don't center all variables cause some shouldn't be centered (placette/Placet and id)
+pca_result <- prcomp(scaled_X, center = FALSE, scale. = FALSE)
+
+eig_val <- get_eigenvalue(pca_result)
+
+#bar plot of the eigenvalue (percentage of explained variance by that dimension)
+fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 50))
+
+# prompt for accessing results
+var <- get_pca_var(pca_result)
+
+# most contributing descriptors in PCA1 (first dim)
+var_pca1_sort <- sort(var$contrib[,1], decreasing = TRUE)
+
+# visualize PCA variables
+fviz_pca_var(pca_result, col.var = "pink")
+
+# visualize PCA variables V1
+fviz_pca_var(pca_result, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+)
+
+# visualize PCA variables V2
+fviz_pca_var(pca_result, col.var = "contrib") +
+  scale_color_gradient2(low = "blue", mid = "yellow", high = "red", midpoint = 1) +
+  theme_minimal()
+
+# visualize PCA individuals
+fviz_pca_ind(pca_result, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+)
+
+fviz_pca_biplot(pca_result, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969"  # Individuals color
+)
+
+# extract loadings from PC1 and PC2
+loadingsPC1 <- pca_result$rotation[,1]
+loadingsPC2 <- pca_result$rotation[,2]
+
+# put them in dataframe
+loadingsPCA <- data.frame(
+  Variable = rownames(pca_result$rotation),
+  PC1 = pca_result$rotation[,1],
+  PC2 = pca_result$rotation[,2]
+)
+
+# sort drivers
+loadingsPC1_sorted <- loadingsPCA[order(abs(loadingsPCA$PC1), decreasing = TRUE), ]
+loadingsPC2_sorted <- loadingsPCA[order(abs(loadingsPCA$PC2), decreasing = TRUE), ]
+
+
+rm(pca_data,pca_result,X)
+
+
+
