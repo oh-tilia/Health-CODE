@@ -22,24 +22,32 @@ df_BRCA <- read.csv2(dataset)
 rm(dataset)
 
 #------------------------------NETTOYAGE---------------------------------------
-colnames(df_BRCA) <- df_BRCA[1,]
+#rename columns from colummn 1,2... to actual names
+colnames(df_BRCA) <- df_BRCA[1,] 
 df_BRCA <- df_BRCA[-1,]
+
+#delete useless ensemble IDs
 df_BRCA$`Ensembl.114.Transcript.ID` <- NULL
+
+#convert column from chr to numeric to use them 
 df_BRCA[,3:54] <- lapply(df_BRCA[,3:54], function(x) as.numeric(as.character(x)))
 
-#------------------------------LABELS-----------------------------------------
-sample_names <- colnames(df_BRCA)[3:54]  # 52 échantillons
+#------------------------------LABELS-----------------------------------------                   
+sample_names <- colnames(df_BRCA)[3:54]  # 52 échantillons (use the names of the column as sample names)
 metadata <- data.frame(
   sample = sample_names,
   cell_line = sub("counts\\.([^.]+)\\..*", "\\1", sample_names),
   condition = sub("counts\\.[^.]+\\.([^.]+\\.[^.]+)\\.RNA.*", "\\1", sample_names),
   stringsAsFactors = FALSE
-)
+) #creating metadata
 metadata$knockdown <- ifelse(grepl("NRP1", metadata$condition), "KD", "Control")
 metadata$tech      <- ifelse(grepl("^sh", metadata$condition), "shRNA", "siRNA")
 
 #------------------------------NORMALISATION-----------------------------------
+
 expr_mat <- as.matrix(df_BRCA[, 3:54])
+
+#use the name of  the transcript as indexes                         
 rownames(expr_mat) <- df_BRCA$`Ensembl.114.Transcript.Name`
 
 # Filtre : transcrits exprimés dans au moins 3 échantillons
@@ -52,7 +60,7 @@ lib_sizes <- colSums(expr_mat)
 cpm_mat   <- sweep(expr_mat, 2, lib_sizes, "/") * 1e6
 log_cpm   <- log2(cpm_mat + 1)
 
-# Ajustement automatique du paramètre n_top_rows
+# Ajustement automatique du paramètre n_top_rows: if number of transcripts post filtration is lower than 20000, use the number of transcript instead as a variable
 if (n_top_rows > nrow(log_cpm)) {
   warning("n_top_rows > nombre de transcrits filtrés. Utilisation de ", nrow(log_cpm), " transcrits à la place.")
   n_top_rows <- nrow(log_cpm)
@@ -89,7 +97,7 @@ ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = cell_line, shape = knockdown))
   theme_minimal()
 
 #------------------------------ML: CLASSIFICATION (k-fold CV pour tuning)-----------------------------
-set.seed(42)
+set.seed(42) #reproducible results
 
 # Split global (75% train / 25% test)
 split  <- initial_split(ml_df %>% select(-cell_line), prop = 0.75, strata = label)
