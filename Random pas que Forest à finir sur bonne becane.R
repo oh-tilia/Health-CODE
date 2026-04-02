@@ -1,7 +1,7 @@
 #================================= PIPELINE RNA-seq KD vs Control =================================#
 
 #------------------------------PARAMÈTRES------------------------------------
-n_top_rows <- 20000   # Nombre de transcrits les plus variables à utiliser
+n_top_rows <- 2000   # Nombre de transcrits les plus variables à utiliser
 
 #------------------------------LIBRARIES--------------------------------------
 library(dplyr)
