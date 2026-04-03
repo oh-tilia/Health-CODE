@@ -77,17 +77,25 @@ if (n_top_rows > nrow(log_cpm)) {
   n_top_rows <- nrow(log_cpm)
 }
 
-#------------------------------------PCA----------------------------------------
+#--------------------------------FULL DATA PCA----------------------------------
+#load librairies
+library(ggplot2)
+library(tidyverse)
+library("FactoMineR")
+library("factoextra")
+
 #selection of the transcripts that explain the most the variance out of n_top_rows
 vars      <- rowVars(log_cpm)
 top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
 log_top   <- log_cpm[top_idx, ]   #FINAL DF TO BE USED
 
-#PCA
-pca_res <- prcomp(t(log_top), scale. = TRUE)
-pca_data  <- as.data.frame(pca_res$x[, 1:5]) #PCA results on the 5 first dimensions
+#run PCA prompt
+pca_result <- prcomp(t(log_top), center = TRUE, scale. = TRUE)
+
+#PCA results on the 8 first dimensions
+pca_data  <- as.data.frame(pca_result$x[, 1:8])
 pca_data  <- cbind(pca_data, metadata) 
-var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+var_explained <- round(100 * pca_result$sdev^2 / sum(pca_result$sdev^2), 1)
 
 ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_line, shape = knockdown)) +
   geom_point(size = 3, alpha = 0.85) +
@@ -95,17 +103,6 @@ ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_line, shape = knockdown)) +
        x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)")) +
   theme_minimal()
-
-#---------------------------------PCA DRIVERS-----------------------------------
-
-#load librairies
-library(ggplot2)
-library(tidyverse)
-library("FactoMineR")
-library("factoextra")
-
-#run PCA prompt
-pca_result <- prcomp(t(log_top), center = TRUE, scale. = TRUE)
 
 eig_val <- get_eigenvalue(pca_result)
 
