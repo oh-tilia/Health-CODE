@@ -97,11 +97,20 @@ pca_data  <- as.data.frame(pca_result$x[, 1:8])
 pca_data  <- cbind(pca_data, metadata) 
 var_explained <- round(100 * pca_result$sdev^2 / sum(pca_result$sdev^2), 1)
 
+#PCA plot on PC1 & PC2
 ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_line, shape = knockdown)) +
   geom_point(size = 3, alpha = 0.85) +
   labs(title = "PCA — NRP1 knockdown vs Control",
        x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)")) +
+  theme_minimal()
+
+#PCA plot on PC3 & PC4
+ggplot(pca_data, aes(x = PC3, y = PC4, color = cell_line, shape = knockdown)) +
+  geom_point(size = 3, alpha = 0.85) +
+  labs(title = "PCA — NRP1 knockdown vs Control",
+       x = paste0("PC3 (", var_explained[3], "%)"),
+       y = paste0("PC4 (", var_explained[4], "%)")) +
   theme_minimal()
 
 eig_val <- get_eigenvalue(pca_result)
