@@ -154,7 +154,7 @@ ggplot(pca_data, aes(x = PC1, y = PC2, shape = knockdown)) +
        y = paste0("PC2 (", var_explained[2], "%)")) +
   theme_minimal()
 
-#-----------------------------------PCA_SUM159----------------------------------
+#-----------------------------------PCA_SUM159_PC1_PC2----------------------------------
 
 if (n_top_rows > nrow(log_SUM159)) {
   warning("n_top_rows > nombre de transcrits filtrés. Utilisation de ", nrow(log_cpm), " transcrits à la place.")
@@ -176,4 +176,28 @@ ggplot(pca_data, aes(x = PC1, y = PC2, shape = knockdown)) +
   labs(title = "PCA — NRP1 knockdown vs Control _ Cell line SUM159",
        x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)")) +
+  theme_minimal()
+
+#----------------------------------PCA_SUM159_PC3+PC4-------------------------------
+
+if (n_top_rows > nrow(log_SUM159)) {
+  warning("n_top_rows > nombre de transcrits filtrés. Utilisation de ", nrow(log_cpm), " transcrits à la place.")
+  n_top_rows <- nrow(log_SUM159)
+}
+
+vars      <- rowVars(data.matrix(log_SUM159))
+top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
+log_top   <- log_SUM159[top_idx, ]   #FINAL DF TO BE USED
+
+#PCA_MDAMB231
+pca_res <- prcomp(t(log_top), scale. = TRUE)
+pca_data  <- as.data.frame(pca_res$x[, 1:8]) #PCA results on the 5 first dimensions
+pca_data  <- cbind(pca_data,metadata[is.element(metadata$cell_line, "SUM159"), ]) 
+var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+
+ggplot(pca_data, aes(x = PC3, y = PC4, shape = knockdown)) +
+  geom_point(size = 3, alpha = 0.85,color = "#00BFC4") +
+  labs(title = "PCA — NRP1 knockdown vs Control _ Cell line SUM159",
+       x = paste0("PC1 (", var_explained[3], "%)"),
+       y = paste0("PC2 (", var_explained[4], "%)")) +
   theme_minimal()
