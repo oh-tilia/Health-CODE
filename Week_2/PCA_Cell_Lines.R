@@ -78,30 +78,30 @@ log_SUM159 <- (data.frame(log_cpm) %>% select(contains("SUM159")))
 
 
 #-----------------------------------PCA_all-------------------------------------
-#selection of the transcripts that explain the most the variance out of n_top_rows
-
-#automatically adjust n_top_row parameter 
-#if number of transcripts post filtration is lower than 20000, use the number of transcripts instead as a variable
-if (n_top_rows > nrow(log_cpm)) {
-  warning("n_top_rows > nombre de transcrits filtrés. Utilisation de ", nrow(log_cpm), " transcrits à la place.")
-  n_top_rows <- nrow(log_cpm)
-}
-
-vars      <- rowVars(log_cpm)
-top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
-log_top   <- log_cpm[top_idx, ]   #FINAL DF TO BE USED
-
-pca_res <- prcomp(t(log_top), scale. = TRUE)
-pca_data  <- as.data.frame(pca_res$x[, 1:8]) #PCA results on the 5 first dimensions
-pca_data  <- cbind(pca_data, metadata) 
-var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
-
-ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_line, shape = knockdown)) +
-  geom_point(size = 3, alpha = 0.85) +
-  labs(title = "PCA — NRP1 knockdown vs Control",
-       x = paste0("PC1 (", var_explained[1], "%)"),
-       y = paste0("PC2 (", var_explained[2], "%)")) +
-  theme_minimal()
+  #selection of the transcripts that explain the most the variance out of n_top_rows
+  
+  #automatically adjust n_top_row parameter 
+  #if number of transcripts post filtration is lower than 20000, use the number of transcripts instead as a variable
+  if (n_top_rows > nrow(log_cpm)) {
+    warning("n_top_rows > nombre de transcrits filtrés. Utilisation de ", nrow(log_cpm), " transcrits à la place.")
+    n_top_rows <- nrow(log_cpm)
+  }
+  
+  vars      <- rowVars(log_cpm)
+  top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
+  log_top   <- log_cpm[top_idx, ]   #FINAL DF TO BE USED
+  
+  pca_res <- prcomp(t(log_top), scale. = TRUE)
+  pca_data  <- as.data.frame(pca_res$x[, 1:8]) #PCA results on the 5 first dimensions
+  pca_data  <- cbind(pca_data, metadata) 
+  var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+  
+  ggplot(pca_data, aes(x = PC3, y = PC4, color = cell_line, shape = knockdown)) +
+    geom_point(size = 3, alpha = 0.85) +
+    labs(title = "PCA — NRP1 knockdown vs Control",
+         x = paste0("PC1 (", var_explained[1], "%)"),
+         y = paste0("PC2 (", var_explained[2], "%)")) +
+    theme_minimal()
 
 #-----------------------------------PCA_HS578T----------------------------------
 
@@ -117,10 +117,10 @@ top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
 log_top   <- log_HS578T[top_idx, ]   #FINAL DF TO BE USED
 
 #PCA_HS578T
-pca_res <- prcomp(t(log_top), scale. = TRUE)
-pca_data  <- as.data.frame(pca_res$x[, 1:8]) #PCA results on the 5 first dimensions
+pca_res_HS578T <- prcomp(t(log_top), scale. = TRUE)
+pca_data  <- as.data.frame(pca_res_HS578T$x[, 1:8]) #PCA results on the 5 first dimensions
 pca_data  <- cbind(pca_data, metadata[is.element(metadata$cell_line, "HS578T"), ]) 
-var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+var_explained <- round(100 * pca_res_HS578T$sdev^2 / sum(pca_res_HS578T$sdev^2), 1)
 
 ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_line, shape = knockdown)) +
   geom_point(size = 3, alpha = 0.85) +
@@ -142,10 +142,10 @@ top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
 log_top   <- log_MDAMB231[top_idx, ]   #FINAL DF TO BE USED
 
 #PCA_MDAMB231
-pca_res <- prcomp(t(log_top), scale. = TRUE)
-pca_data  <- as.data.frame(pca_res$x[, 1:5]) #PCA results on the 5 first dimensions
+pca_res_MDAMB231 <- prcomp(t(log_top), scale. = TRUE)
+pca_data  <- as.data.frame(pca_res_MDAMB231$x[, 1:5]) #PCA results on the 5 first dimensions
 pca_data  <- cbind(pca_data, metadata[is.element(metadata$cell_line, "MDAMB231"), ]) 
-var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+var_explained <- round(100 * pca_res_MDAMB231$sdev^2 / sum(pca_res_MDAMB231$sdev^2), 1)
 
 ggplot(pca_data, aes(x = PC1, y = PC2, shape = knockdown)) +
   geom_point(size = 3, alpha = 0.85, colour = "#7CAE00") +
@@ -166,10 +166,10 @@ top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
 log_top   <- log_SUM159[top_idx, ]   #FINAL DF TO BE USED
 
 #PCA_MDAMB231
-pca_res <- prcomp(t(log_top), scale. = TRUE)
-pca_data  <- as.data.frame(pca_res$x[, 1:5]) #PCA results on the 5 first dimensions
+pca_res_SUM159 <- prcomp(t(log_top), scale. = TRUE)
+pca_data  <- as.data.frame(pca_res_SUM159$x[, 1:5]) #PCA results on the 5 first dimensions
 pca_data  <- cbind(pca_data,metadata[is.element(metadata$cell_line, "SUM159"), ]) 
-var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+var_explained <- round(100 * pca_res_SUM159$sdev^2 / sum(pca_res_SUM159$sdev^2), 1)
 
 ggplot(pca_data, aes(x = PC1, y = PC2, shape = knockdown)) +
   geom_point(size = 3, alpha = 0.85,color = "#00BFC4") +
@@ -178,26 +178,23 @@ ggplot(pca_data, aes(x = PC1, y = PC2, shape = knockdown)) +
        y = paste0("PC2 (", var_explained[2], "%)")) +
   theme_minimal()
 
-#----------------------------------PCA_SUM159_PC3+PC4-------------------------------
+#-----------------------------------------Visualisation des variables par cell lines-----------------------
 
-if (n_top_rows > nrow(log_SUM159)) {
-  warning("n_top_rows > nombre de transcrits filtrés. Utilisation de ", nrow(log_cpm), " transcrits à la place.")
-  n_top_rows <- nrow(log_SUM159)
-}
 
-vars      <- rowVars(data.matrix(log_SUM159))
-top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
-log_top   <- log_SUM159[top_idx, ]   #FINAL DF TO BE USED
+#visualize PCA variables for cell line HS578T
+visu_HS578T <-  fviz_pca_var(pca_res_HS578T, col.var = "contrib",
+                        gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                        select.var = list(contrib = 100 )
+)
 
-#PCA_MDAMB231
-pca_res <- prcomp(t(log_top), scale. = TRUE)
-pca_data  <- as.data.frame(pca_res$x[, 1:8]) #PCA results on the 5 first dimensions
-pca_data  <- cbind(pca_data,metadata[is.element(metadata$cell_line, "SUM159"), ]) 
-var_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+#visualize PCA variables for  cell line MDAMB231
+visu_MDAMB231 <-  fviz_pca_var(pca_res_MDAMB231, col.var = "contrib",
+                        gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                        select.var = list(contrib = 100 )
+)
 
-ggplot(pca_data, aes(x = PC3, y = PC4, shape = knockdown)) +
-  geom_point(size = 3, alpha = 0.85,color = "#00BFC4") +
-  labs(title = "PCA — NRP1 knockdown vs Control _ Cell line SUM159",
-       x = paste0("PC1 (", var_explained[3], "%)"),
-       y = paste0("PC2 (", var_explained[4], "%)")) +
-  theme_minimal()
+#visualize PCA variables for cell line SUM159
+visu_SUM159 <-  fviz_pca_var(pca_res_SUM159, col.var = "contrib",
+                        gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                        select.var = list(contrib = 100 )
+)
