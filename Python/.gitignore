@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.venv/
+pca_out/
+*.png
