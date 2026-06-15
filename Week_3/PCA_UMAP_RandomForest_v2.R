@@ -13,7 +13,7 @@ library(matrixStats)
 
 #--------------------------------DATA LOADING-----------------------------------
 
-dataset <- "Datasets/GSE266566_full.csv"
+dataset <- "GSE266566_COUNTS.rsem_human.transcripts.csv"
 df_BRCA <- read.csv2(dataset)
 rm(dataset)
 
@@ -135,8 +135,8 @@ loadingsPC2_sorted <- loadingsPCA[order(abs(loadingsPCA$PC2), decreasing = TRUE)
 
 
 
-
 #------------------------------------UMAP---------------------------------------
+library(umap)
 
 #selection of the transcripts that explain the most the variance out of n_top_rows
 vars      <- rowVars(log_cpm)
@@ -155,6 +155,24 @@ ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = cell_line, shape = knockdown))
   theme_minimal()
 
 
+
+#-----------------------------PCA LOADINGS EXTRACT------------------------------
+# extract loadings 
+loadings <- pca_result$rotation  # genes × PCs
+
+# choose Principal Components to consider, we take the first 5
+pcs_to_use <- 1:5
+
+# compute importance score per gene
+gene_scores <- rowSums(abs(loadings[, pcs_to_use]))
+
+# select top genes
+top_gene_n <- min(500, length(gene_scores))
+top_genes <- names(sort(gene_scores, decreasing = TRUE))[1:top_gene_n]
+
+#create a dataframe with only the top genes from log_top
+#transpose df to have our genes as cols
+rf_df <- as.data.frame(t(log_top[top_genes, ]))
 
 #------------------ML: CLASSIFICATION USING RANDOM FOREST-----------------------
 set.seed(222) #reproducible results
@@ -184,11 +202,11 @@ rf_df$cell_line <- factor(metadata$cell_line)
 
 #split our df to train the model (75% train / 25% test)
 splitkd  <- initial_split(rf_df, prop = 0.75, strata = knockdown)
-trainkd  <- training(split)
-testkd   <- testing(split)
+trainkd  <- training(splitkd)
+testkd   <- testing(splitkd)
 
 #running Random Forest
-rf_spec_kd <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(train)-1))) %>%
+rf_spec_kd <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(trainkd)-1))) %>%
   set_engine("ranger", importance = "permutation")
 
 rf_recipe_kd <- recipe(knockdown ~ ., data = trainkd) %>%
@@ -229,7 +247,7 @@ train_cl  <- training(split_cl)
 test_cl   <- testing(split_cl)
 
 #running Random Forest
-rf_spec_cl <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(train)-1)) ) %>%
+rf_spec_cl <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(train_cl)-1)) ) %>%
   set_engine("ranger", importance = "permutation")
 
 rf_recipe_cl <- recipe(cell_line ~ ., data = train_cl) %>%
@@ -263,17 +281,9 @@ rf_importance_cl <- vip(rf_model_cl, num_features = 20)
 rf_importance_cl
 
 
-#---------------------HIERARCHICAL CLUSTERING--------------------------
+#--------------------------HIERARCHICAL CLUSTERING------------------------------
 library(factoextra)
 library(cluster)
-
-# select top genes
-top_gene_n <- min(500, length(gene_scores))
-top_genes <- names(sort(gene_scores, decreasing = TRUE))[1:top_gene_n]
-
-#create a dataframe with only the top genes from log_top
-#transpose df to have our genes as cols
-rf_df <- as.data.frame(t(log_top[top_genes, ]))
 
 #define linkage methods
 m <- c( "average", "single", "complete", "ward")
