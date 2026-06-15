@@ -74,8 +74,87 @@ vars      <- rowVars(log_cpm)
 top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
 log_top   <- log_cpm[top_idx, ]   #FINAL DF TO BE USED
 
-#run PCA to rank genes for feature selection
+
+#--------------------------------FULL DATA PCA----------------------------------
+#load librairies
+library(ggplot2)
+library(tidyverse)
+library("FactoMineR")
+library("factoextra")
+
+#run PCA prompt
 pca_result <- prcomp(t(log_top), center = TRUE, scale. = TRUE)
+
+#PCA results on the 8 first dimensions
+pca_data  <- as.data.frame(pca_result$x[, 1:8])
+pca_data  <- cbind(pca_data, metadata) 
+var_explained <- round(100 * pca_result$sdev^2 / sum(pca_result$sdev^2), 1)
+
+#PCA plot on PC1 & PC2
+ggplot(pca_data, aes(x = PC1, y = PC2, color = cell_line, shape = knockdown)) +
+  geom_point(size = 3, alpha = 0.85) +
+  labs(title = "PCA — NRP1 knockdown vs Control",
+       x = paste0("PC1 (", var_explained[1], "%)"),
+       y = paste0("PC2 (", var_explained[2], "%)")) +
+  theme_minimal()
+
+#PCA plot on PC3 & PC4
+ggplot(pca_data, aes(x = PC3, y = PC4, color = cell_line, shape = knockdown)) +
+  geom_point(size = 3, alpha = 0.85) +
+  labs(title = "PCA — NRP1 knockdown vs Control",
+       x = paste0("PC3 (", var_explained[3], "%)"),
+       y = paste0("PC4 (", var_explained[4], "%)")) +
+  theme_minimal()
+
+eig_val <- get_eigenvalue(pca_result)
+
+#bar plot of the eigenvalue (percentage of explained variance by that dimension)
+fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 50))
+#at dimension 8, we have 73.0% of the variance explained == keep 8 dim for machine learning 
+
+#prompt for accessing results
+var <- get_pca_var(pca_result)
+
+#most contributing descriptors in PCA1 (first dim)
+var_pca1_sort <- sort(var$contrib[,1], decreasing = TRUE)
+
+#extract loadings from PC1 and PC2
+loadingsPC1 <- pca_result$rotation[,1]
+loadingsPC2 <- pca_result$rotation[,2]
+
+#put them in dataframe
+loadingsPCA <- data.frame(
+  Variable = rownames(pca_result$rotation),
+  PC1 = pca_result$rotation[,1],
+  PC2 = pca_result$rotation[,2]
+)
+
+#sort drivers
+loadingsPC1_sorted <- loadingsPCA[order(abs(loadingsPCA$PC1), decreasing = TRUE), ]
+loadingsPC2_sorted <- loadingsPCA[order(abs(loadingsPCA$PC2), decreasing = TRUE), ]
+
+
+
+
+#------------------------------------UMAP---------------------------------------
+
+#selection of the transcripts that explain the most the variance out of n_top_rows
+vars      <- rowVars(log_cpm)
+top_idx   <- order(vars, decreasing = TRUE)[1:n_top_rows]
+log_top   <- log_cpm[top_idx, ]   #FINAL DF TO BE USED
+
+#UMAP
+umap_res <- umap(t(log_top))
+umap_df  <- as.data.frame(umap_res$layout)
+colnames(umap_df) <- c("UMAP1", "UMAP2")
+umap_df  <- cbind(umap_df, metadata)
+
+ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = cell_line, shape = knockdown)) +
+  geom_point(size = 3, alpha = 0.85) +
+  labs(title = "UMAP — NRP1 knockdown vs Control") +
+  theme_minimal()
+
+
 
 #------------------ML: CLASSIFICATION USING RANDOM FOREST-----------------------
 set.seed(222) #reproducible results
@@ -182,3 +261,42 @@ rf_model_cl <- extract_fit_parsnip(rf_fit_cl)$fit
 rf_importance_cl <- vip(rf_model_cl, num_features = 20)
 
 rf_importance_cl
+
+
+#---------------------HIERARCHICAL CLUSTERING--------------------------
+library(factoextra)
+library(cluster)
+
+# select top genes
+top_gene_n <- min(500, length(gene_scores))
+top_genes <- names(sort(gene_scores, decreasing = TRUE))[1:top_gene_n]
+
+#create a dataframe with only the top genes from log_top
+#transpose df to have our genes as cols
+rf_df <- as.data.frame(t(log_top[top_genes, ]))
+
+#define linkage methods
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+#function to compute agglomerative coefficient
+ac <- function(x) {
+  agnes(df, method = x)$ac
+}
+
+#calculate agglomerative coefficient for each clustering linkage method
+#the closer this value is to 1, the stronger the clusters
+sapply(m, ac)
+
+#perform hierarchical clustering using chosen method
+clust <- agnes(df, method = "ward")
+
+#produce dendrogram
+pltree(clust, cex = 0.6, hang = -1, main = "Dendrogram") 
+
+
+
+
+
+
+
