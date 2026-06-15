@@ -101,7 +101,7 @@ rf_df <- as.data.frame(t(log_top[top_genes, ]))
 rf_df$knockdown <- factor(metadata$knockdown, levels = c("Control", "KD"))
 rf_df$cell_line <- factor(metadata$cell_line)
 
-#Knockdown recognition model
+#-----------------Knockdown recognition model
 
 #split our df to train the model (75% train / 25% test)
 splitkd  <- initial_split(rf_df, prop = 0.75, strata = knockdown)
@@ -109,7 +109,7 @@ trainkd  <- training(split)
 testkd   <- testing(split)
 
 #running Random Forest
-rf_spec_kd <- rand_forest(mode = "classification", trees = 700) %>%
+rf_spec_kd <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(train)-1))) %>%
   set_engine("ranger", importance = "permutation")
 
 rf_recipe_kd <- recipe(knockdown ~ ., data = trainkd) %>%
@@ -142,15 +142,15 @@ rf_importance_kd <- vip(rf_model_kd, num_features = 20)
 
 rf_importance_kd
 
-#Cell_line recognition model
+#------Cell_line recognition model
 
 #split our df to train the model (75% train / 25% test)
-split_cl  <- initial_split(rf_df, prop = 0.75, strata = knockdown)
+split_cl  <- initial_split(rf_df, prop = 0.75, strata = cell_line)
 train_cl  <- training(split_cl)
 test_cl   <- testing(split_cl)
 
 #running Random Forest
-rf_spec_cl <- rand_forest(mode = "classification", trees = 700) %>%
+rf_spec_cl <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(train)-1)) ) %>%
   set_engine("ranger", importance = "permutation")
 
 rf_recipe_cl <- recipe(cell_line ~ ., data = train_cl) %>%
