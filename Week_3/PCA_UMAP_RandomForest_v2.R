@@ -34,14 +34,15 @@ df_BRCA[,3:54] <- lapply(df_BRCA[,3:54], function(x) as.numeric(as.character(x))
 #52 samples (use the names of the column as sample names)
 sample_names <- colnames(df_BRCA)[3:54] 
 
-#creating metadata
 metadata <- data.frame(
   sample = sample_names,
+  cell_line = sub("counts\\.([^.]+)\\..*", "\\1", sample_names),
   condition = sub("counts\\.[^.]+\\.([^.]+\\.[^.]+)\\.RNA.*", "\\1", sample_names),
   stringsAsFactors = FALSE
 )
 
 metadata$knockdown <- ifelse(grepl("NRP1", metadata$condition), "KD", "Control")
+metadata$tech      <- ifelse(grepl("^sh", metadata$condition), "shRNA", "siRNA")
 
 #-------------------------------NORMALIZATION-----------------------------------
 
@@ -98,31 +99,34 @@ rf_df <- as.data.frame(t(log_top[top_genes, ]))
 
 #add knockdown target col from metadata
 rf_df$knockdown <- factor(metadata$knockdown, levels = c("Control", "KD"))
+rf_df$cell_line <- factor(metadata$cell_line)
+
+#Knockdown recognition model
 
 #split our df to train the model (75% train / 25% test)
-split  <- initial_split(rf_df, prop = 0.75, strata = knockdown)
-train  <- training(split)
-test   <- testing(split)
+splitkd  <- initial_split(rf_df, prop = 0.75, strata = knockdown)
+trainkd  <- training(split)
+testkd   <- testing(split)
 
 #running Random Forest
-rf_spec <- rand_forest(mode = "classification", trees = 700) %>%
+rf_spec_kd <- rand_forest(mode = "classification", trees = 700) %>%
   set_engine("ranger", importance = "permutation")
 
-rf_recipe <- recipe(knockdown ~ ., data = train) %>%
+rf_recipe_kd <- recipe(knockdown ~ ., data = trainkd) %>%
   step_zv(all_predictors())
 
 #fit the model
-rf_workflow <- workflow() %>%
-  add_model(rf_spec) %>%
-  add_recipe(rf_recipe)
+rf_workflow_kd <- workflow() %>%
+  add_model(rf_spec_kd) %>%
+  add_recipe(rf_recipe_kd)
 
-rf_fit <- fit(rf_workflow, data = train)
+rf_fit_kd <- fit(rf_workflow_kd, data = trainkd)
 
 #---Plotting Random Forest results---
 
 # predictions
-preds <- predict(rf_fit, test) %>%
-  bind_cols(test)
+preds <- predict(rf_fit_kd, testkd) %>%
+  bind_cols(testkd)
 
 # confusion matrix
 conf_mat(preds, truth = knockdown, estimate = .pred_class)
@@ -133,7 +137,48 @@ conf_mat(preds, truth = knockdown, estimate = .pred_class) %>% autoplot(type = "
 metrics(preds, truth = knockdown, estimate = .pred_class)
 
 # variable importance from the fitted ranger model
-rf_model <- extract_fit_parsnip(rf_fit)$fit
-rf_importance <- vip(rf_model, num_features = 20)
+rf_model_kd <- extract_fit_parsnip(rf_fit_kd)$fit
+rf_importance_kd <- vip(rf_model_kd, num_features = 20)
 
-rf_importance
+rf_importance_kd
+
+#Cell_line recognition model
+
+#split our df to train the model (75% train / 25% test)
+split_cl  <- initial_split(rf_df, prop = 0.75, strata = knockdown)
+train_cl  <- training(split_cl)
+test_cl   <- testing(split_cl)
+
+#running Random Forest
+rf_spec_cl <- rand_forest(mode = "classification", trees = 700) %>%
+  set_engine("ranger", importance = "permutation")
+
+rf_recipe_cl <- recipe(cell_line ~ ., data = train_cl) %>%
+  step_zv(all_predictors())
+
+#fit the model
+rf_workflow_cl <- workflow() %>%
+  add_model(rf_spec_cl) %>%
+  add_recipe(rf_recipe_cl)
+
+rf_fit_cl <- fit(rf_workflow_cl, data = train_cl)
+
+#---Plotting Random Forest results---
+
+# predictions
+preds_cl <- predict(rf_fit_cl, test_cl) %>%
+  bind_cols(test_cl)
+
+# confusion matrix
+conf_mat(preds_cl, truth = cell_line, estimate = .pred_class)
+
+conf_mat(preds_cl, truth = cell_line, estimate = .pred_class) %>% autoplot(type = "heatmap")
+
+# model performance
+metrics(preds_cl, truth = cell_line, estimate = .pred_class)
+
+# variable importance from the fitted ranger model
+rf_model_cl <- extract_fit_parsnip(rf_fit_cl)$fit
+rf_importance_cl <- vip(rf_model_cl, num_features = 20)
+
+rf_importance_cl
