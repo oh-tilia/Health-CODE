@@ -194,10 +194,12 @@ rf_df$cell_line <- factor(metadata$cell_line)
 split  <- initial_split(rf_df, prop = 0.75, strata = state)
 
 #Removing columns with duplicate data in the split                  
-split[,c(361,362,374)] <- NULL                      
+                      
 train  <- training(split)
 test   <- testing(split)
-
+train[,c(361,362,374)] <- NULL
+test[,c(361,362,374)] <- NULL                      
+                      
 #running Random Forest using ranger engine and permutation importance
 # --> permutation importance  in the ranger model for random forests measures how much the model's prediction error
 #     increases when the values of a feature are shuffled
