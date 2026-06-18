@@ -15,46 +15,51 @@ df_HD <-read.csv2("GSE71862_MCF7_MCF10A_RSEM_expectedcounts.csv")
 #rename columns from column 1,2... to actual names
 colnames(df_BRCA) <- df_BRCA[1,] 
 df_BRCA <- df_BRCA[-1,]
-df_BRCA <- df_BRCA[ ,c(-1,-3)]
-
-
 colnames(df_HD) <- df_HD[1,]
 df_HD <- df_HD[-1,]
 
-#delete useless columns
+#remove unneeded columns from the dataset
+df_BRCA <- df_BRCA[ ,c(-1,-3)]
 df_HD$accession <- NULL
 
 #convert column from chr to numeric to use them
 df_BRCA[,2:53] <- lapply(df_BRCA[,2:53], function(x) as.numeric(as.character(x)))
-
-#convert column from chr to numeric to use them
 df_HD[,2:7] <- lapply(df_HD[,2:7], function(x) as.numeric(as.character(x)))
 
 #--------------------------TREATMENT AND COMBINATION-----------------------------
 
+#regex expression to get only the gene name for the transcript name                      
 df_BRCA$gene <- sub('([^-]+).*','\\1',df_BRCA$Ensembl.114.Transcript.Name)
+
+#total gene expression of the gene across all sample
+# -> if duplicate genes, only the one with the most expression is kept
 df_BRCA$total <-  rowSums(df_BRCA[,c(2:53)])
 
+#replace the column with transcript name by the column with gene name so thats its on the left of the dataset
+#maybe not the optimal way to do it but it works fine
 df_BRCA_reduced <- slice_max(df_BRCA, order_by= total , by=gene)
 df_BRCA_reduced$Ensembl.114.Transcript.Name <- df_BRCA_reduced$gene
 df_BRCA_reduced$gene <-NULL
-
 names(df_BRCA_reduced)[names(df_BRCA_reduced) == 'Ensembl.114.Transcript.Name'] <- 'gene'
 
+#combine the two dataset used to get a bigger one with 3 healthy samples and 50+ cancerous samples                      
 df_combined <- inner_join(df_BRCA_reduced,df_HD)
 df_combined$total <- NULL
 
+rm(df_BRCA,df_BRCA_reduced,df_HD)
 #-----------------------------------LABELS--------------------------------------                   
 
-# 52 samples (use the names of the column as sample names)
+# 58 samples (use the names of the column as sample names)
 sample_names <- colnames(df_combined)[2:59] 
 
+#create a metadata dataframe to easily access the cell line and state of each sample
 metadata <- data.frame(
   sample = sample_names,
   cell_line = gsub('counts\\.|\\.s.*|_.*',"",sample_names),
   stringsAsFactors = FALSE
 )
 
+#add state (cancerous or healthy) of cells to the metadata
 metadata$state <- ifelse(grepl("MCF10A", metadata$cell_line), "Healthy", "Cancerous")
 
 #remove variables that aren't going to be reused
@@ -130,7 +135,9 @@ pca_eig_val <- get_eigenvalue(pca_result)
 fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 50))
 #at dimension 6, we have 88.4% of the variance explained == keep 6 dimensions for machine learning 
 
-
+#the following commented lines of code can be useful to visualize the data, but it is not mandatory 
+#fviz_contrib(...) doesnt work but since it is not necesssary for the rest of the code to work it was not fixed
+                      
 # #prompt for accessing results
 # pca_var <- get_pca_var(pca_result)
 # 
@@ -170,13 +177,14 @@ top_genes <- names(sort(gene_scores, decreasing = TRUE))[1:top_gene_n]
 #transpose df to have our genes as cols
 rf_df <- as.data.frame(t(log_top[top_genes, ]))
 
+#remove unneeded variables
 rm(loadings, pcs_to_use, gene_scores, top_gene_n)
 
 #------------------ML: CLASSIFICATION USING RANDOM FOREST-----------------------
 #set seed for reproducible results
 set.seed(222)
 
-#add knockdown target col from metadata
+#add state target col from metadata
 rf_df$state <- factor(metadata$state)
 rf_df$cell_line <- factor(metadata$cell_line)
 
@@ -184,6 +192,9 @@ rf_df$cell_line <- factor(metadata$cell_line)
 
 #split our df to train the model (75% train / 25% test)
 split  <- initial_split(rf_df, prop = 0.75, strata = state)
+
+#Removing columns with duplicate data in the split                  
+split[,c(361,362,374)] <- NULL                      
 train  <- training(split)
 test   <- testing(split)
 
@@ -194,9 +205,6 @@ test   <- testing(split)
 
 rf_spec <- rand_forest(mode = "classification", trees = 700, mtry = floor(sqrt(ncol(train)-1))) %>%
   set_engine("ranger", importance = "permutation")
-
-train[,c(361,362,374)] <- NULL
-test[,c(361,362,374)] <- NULL
 
 rf_recipe <- recipe(state ~ ., data = train) %>%
   step_zv(all_predictors())
