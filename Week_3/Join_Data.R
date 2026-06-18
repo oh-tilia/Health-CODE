@@ -7,6 +7,7 @@ library(vip)
 
 n_top_rows <- 2000   #numbers of transcripts to be used
 
+#import data 
 df_BRCA <- read.csv2("GSE266566_COUNTS.csv")
 df_HD <-read.csv2("GSE71862_MCF7_MCF10A_RSEM_expectedcounts.csv")
 
@@ -46,7 +47,9 @@ names(df_BRCA_reduced)[names(df_BRCA_reduced) == 'Ensembl.114.Transcript.Name'] 
 df_combined <- inner_join(df_BRCA_reduced,df_HD)
 df_combined$total <- NULL
 
+#remove variables that aren't going to be reused
 rm(df_BRCA,df_BRCA_reduced,df_HD)
+
 #-----------------------------------LABELS--------------------------------------                   
 
 # 58 samples (use the names of the column as sample names)
@@ -136,7 +139,7 @@ fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 50))
 #at dimension 6, we have 88.4% of the variance explained == keep 6 dimensions for machine learning 
 
 #the following commented lines of code can be useful to visualize the data, but it is not mandatory 
-#fviz_contrib(...) doesnt work but since it is not necesssary for the rest of the code to work it was not fixed
+#fviz_contrib(...) doesnt work but since it is not necessary for the rest of the code to work it was not fixed
                       
 # #prompt for accessing results
 # pca_var <- get_pca_var(pca_result)
@@ -155,8 +158,9 @@ fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 50))
 # pc1_loadings_sorted <- pca_loadings[order(abs(pca_loadings$PC1), decreasing = TRUE), ]
 # pc2_loadings_sorted <- pca_loadings[order(abs(pca_loadings$PC2), decreasing = TRUE), ]
 # 
-# #remove variables that are not useful for other methods
-# rm(pca_data, pca_var_explained, pca_eig_val, pca_var, pca_loadings, pc1_loadings_sorted, pc2_loadings_sorted)
+
+#remove variables that are not useful for other methods
+rm(pca_data, pca_var_explained, pca_eig_val, pca_var, pca_loadings, pc1_loadings_sorted, pc2_loadings_sorted)
 
 
 #-----------------------------PCA LOADINGS EXTRACT------------------------------
@@ -192,14 +196,13 @@ rf_df$cell_line <- factor(metadata$cell_line)
 
 #split our df to train the model (75% train / 25% test)
 split  <- initial_split(rf_df, prop = 0.75, strata = state)
-
-#Removing columns with duplicate data in the split                  
-                      
 train  <- training(split)
 test   <- testing(split)
-train[,c(361,362,374)] <- NULL
-test[,c(361,362,374)] <- NULL                      
-                      
+
+#removing columns with duplicate data in the train and test
+train[, c(361, 362, 374)] <- NULL
+test[, c(361, 362, 374)] <- NULL
+
 #running Random Forest using ranger engine and permutation importance
 # --> permutation importance  in the ranger model for random forests measures how much the model's prediction error
 #     increases when the values of a feature are shuffled
@@ -239,4 +242,36 @@ rf_importance
 
 #remove variables that aren't going to be reused
 rm(split, train, test, rf_spec, rf_recipe, rf_workflow, rf_fit, preds, rf_model, rf_importance)
+
+
+#------------------------------------C5.0---------------------------------------
+#load libraries
+library(C50) #for C5.0(); as.party.C5.0()
+library(rsample) #for initial_split()
+
+#add cell line (what we cant to classify)
+rf_df$cell_line <- factor(metadata$cell_line)
+
+#split our df to train the model (75% train / 25% test)
+split <- initial_split(rf_df, prop = 0.75, strata = cell_line)
+train <- training(split)
+test <- testing(split)
+
+#removing columns with duplicate data in the train and test
+train[, c(361, 362, 374)] <- NULL
+test[, c(361, 362, 374)] <- NULL
+
+#create C 5.0 model
+model <- C5.0(cell_line ~ ., data = train)
+
+#print text summary of the tree --> verify genes used
+summary(model)
+party_model <- as.party.C5.0(model)
+
+#decision tree graph
+plot(model)
+
+#remove variables that aren't going to be reused
+rm(split, train, test, model, party_model)
+
 
