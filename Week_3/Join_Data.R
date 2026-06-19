@@ -29,7 +29,7 @@ df_HD <-read.csv2("GSE71862_MCF7_MCF10A_RSEM_expectedcounts.csv")
 #--------------------------------CLEANING---------------------------------------
 
 #rename columns from column 1,2... to actual names
-if (colnames(df_BRCA)[1,] == 'Column1'){
+if (colnames(df_BRCA)[1] == 'Column1'){
   colnames(df_BRCA) <- df_BRCA[1,] 
   df_BRCA <- df_BRCA[-1,]
 }
