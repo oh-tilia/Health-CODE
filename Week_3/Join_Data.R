@@ -1,7 +1,22 @@
+#==============================================================================#
+#                        PIPELINE Cancerous vs Healthy                         #
+#==============================================================================#
+
+
+#---------------------------------LIBRARIES-------------------------------------
+
 library(tidymodels)
+#loading tidymodels loads the following libraries:
+# --> library(ggplot2)
+# --> library(rsample) for initial_split()
+# --> library(parsnip) for rand_forest(), set_engine(), extract_fit_parsnip()
+# --> library(recipes) for recipe(), step_zv()
+# --> library(workflows) for workflow(), add_model(), add_recipe()
 library(dplyr)
-library(matrixStats)
-library(vip)
+library(rsample) #for initial_split() --> Random Forest, C5.0
+library(ranger)
+library(matrixStats) #for rowVars()
+library(vip) #for vip() in Random Forest Model
 
 #---------------------------------PARAMETERS------------------------------------
 
@@ -23,7 +38,7 @@ df_HD <- df_HD[-1,]
 df_BRCA <- df_BRCA[ ,c(-1,-3)]
 df_HD$accession <- NULL
 
-#convert column from chr to numeric to use them
+#convert column from chr to numeric in order to use them
 df_BRCA[,2:53] <- lapply(df_BRCA[,2:53], function(x) as.numeric(as.character(x)))
 df_HD[,2:7] <- lapply(df_HD[,2:7], function(x) as.numeric(as.character(x)))
 
@@ -33,11 +48,12 @@ df_HD[,2:7] <- lapply(df_HD[,2:7], function(x) as.numeric(as.character(x)))
 df_BRCA$gene <- sub('([^-]+).*','\\1',df_BRCA$Ensembl.114.Transcript.Name)
 
 #total gene expression of the gene across all sample
-# -> if duplicate genes, only the one with the most expression is kept
+# --> if duplicate genes, only the one with the most expression is kept
 df_BRCA$total <-  rowSums(df_BRCA[,c(2:53)])
 
 #replace the column with transcript name by the column with gene name so thats its on the left of the dataset
 #maybe not the optimal way to do it but it works fine
+#slice_max bottleneck
 df_BRCA_reduced <- slice_max(df_BRCA, order_by= total , by=gene)
 df_BRCA_reduced$Ensembl.114.Transcript.Name <- df_BRCA_reduced$gene
 df_BRCA_reduced$gene <-NULL
@@ -82,6 +98,10 @@ expr_mat <- expr_mat[keep, ]
 cat("Transcrits retenus après filtre:", nrow(expr_mat), "\n")
 
 #normalization w/ log2(CPM + 1)
+#Log2 is used when normalizing the expression of genes because it aids in calculating fold change, 
+#which measures the up-regulated vs down-regulated genes between samples. Log2 measured data is also 
+#closer to the biologically-detectable changes.
+
 lib_sizes <- colSums(expr_mat)
 cpm_mat   <- sweep(expr_mat, 2, lib_sizes, "/") * 1e6
 log_cpm   <- log2(cpm_mat + 1)
@@ -102,7 +122,7 @@ log_top   <- log_cpm[top_idx, ]   #FINAL DF TO BE USED
 rm(expr_mat, keep, lib_sizes, cpm_mat, vars, log_cpm, top_idx)
 
 #--------------------------------FULL DATA PCA----------------------------------
-#load librairies
+#load librairies for PCA
 library(FactoMineR)
 library(factoextra)
 
@@ -164,13 +184,13 @@ rm(pca_data, pca_var_explained, pca_eig_val, pca_var, pca_loadings, pc1_loadings
 
 
 #-----------------------------PCA LOADINGS EXTRACT------------------------------
-# extract loadings 
+#extract loadings 
 loadings <- pca_result$rotation  # genes × PCs
 
-# choose Principal Components to consider, we take the first 6 --> see eigenvalues
+#choose Principal Components to consider, we take the first 6 --> see eigenvalues
 pcs_to_use <- 1:6
 
-# compute importance score per gene
+#compute importance score per gene
 gene_scores <- rowSums(abs(loadings[, pcs_to_use]))
 
 # select top genes
@@ -200,8 +220,8 @@ train  <- training(split)
 test   <- testing(split)
 
 #removing columns with duplicate data in the train and test
-train[, c(361, 362, 374)] <- NULL
-test[, c(361, 362, 374)] <- NULL
+train <- train[, -c(361, 362, 374)]
+test  <- test[,  -c(361, 362, 374)]
 
 #running Random Forest using ranger engine and permutation importance
 # --> permutation importance  in the ranger model for random forests measures how much the model's prediction error
@@ -220,6 +240,9 @@ rf_workflow <- workflow() %>%
   add_recipe(rf_recipe)
 
 rf_fit <- fit(rf_workflow, data = train)
+
+#prints the underlying ranger object with all call details
+rf_fit %>% extract_fit_parsnip() %>% .$fit
 
 #---Plotting Random Forest results---
 
@@ -245,9 +268,8 @@ rm(split, train, test, rf_spec, rf_recipe, rf_workflow, rf_fit, preds, rf_model,
 
 
 #------------------------------------C5.0---------------------------------------
-#load libraries
+#load libraries for C5.0
 library(C50) #for C5.0(); as.party.C5.0()
-library(rsample) #for initial_split()
 
 #add cell line (what we cant to classify)
 rf_df$cell_line <- factor(metadata$cell_line)
@@ -258,8 +280,8 @@ train <- training(split)
 test <- testing(split)
 
 #removing columns with duplicate data in the train and test
-train[, c(361, 362, 374)] <- NULL
-test[, c(361, 362, 374)] <- NULL
+train <- train[, -c(361, 362, 374)]
+test  <- test[,  -c(361, 362, 374)]
 
 #create C 5.0 model
 model <- C5.0(cell_line ~ ., data = train)
