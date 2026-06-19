@@ -296,4 +296,40 @@ plot(model)
 #remove variables that aren't going to be reused
 rm(split, train, test, model, party_model)
 
+#------------------------------------C5.0---------------------------------------
+#load libraries for C5.0
+library(C50) #for C5.0(); as.party.C5.0()
+
+#set seed for reproducible results
+set.seed(666)
+
+#remove cell_line 
+# --> if not removed the model uses the cell_line label to separate states and does not rely on the genes
+rf_df$cell_line <- NULL
+
+#add state (what we cant to classify)
+rf_df$state <- factor(metadata$state)
+
+#split our df to train the model (75% train / 25% test)
+split <- initial_split(rf_df, prop = 0.75, strata = state)
+train <- training(split)
+test <- testing(split)
+
+#removing columns with duplicate data in the train and test
+train <- train[, -c(361, 362, 374)]
+test  <- test[,  -c(361, 362, 374)]
+
+#create C 5.0 model
+model <- C5.0(state ~ ., data = train)
+
+#print text summary of the tree --> verify genes used
+summary(model)
+party_model <- as.party.C5.0(model)
+
+#decision tree graph
+plot(model)
+
+#remove variables that aren't going to be reused
+rm(split, train, test, model, party_model)
+
 
