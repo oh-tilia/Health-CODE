@@ -9,14 +9,8 @@ Class specified by attribute `outcome'
 
 Read 42 cases (499 attributes) from undefined.data
 
-Decision tree:
-
-C14orf132 <= 1.680699: MDAMB231 (14/1)
-C14orf132 > 1.680699:
-:...MYH14 > 0.3644396: MCF7 (3)
-    MYH14 <= 0.3644396:
-    :...MMP17 <= 2.448398: HS578T (12)
-        MMP17 > 2.448398: SUM159 (13)
+Number of inner nodes:    4
+Number of terminal nodes: 5
 
 
 Evaluation on training data (42 cases):
@@ -40,6 +34,28 @@ Evaluation on training data (42 cases):
 	100.00%	C14orf132
 	 66.67%	MYH14
 	 59.52%	MMP17
+
+	 **Decision tree:**
+
+	C14orf132 <= 1.680699: MDAMB231 (14/1)
+	C14orf132 > 1.680699:
+	:...MYH14 > 0.3644396: MCF7 (3)
+		MYH14 <= 0.3644396:
+		:...MMP17 <= 2.448398: HS578T (12)
+			MMP17 > 2.448398: SUM159 (13)
+
+	**Decision tree from party_model:**
+
+	Fitted party:
+	[1] root
+	|   [2] C14orf132 <= 1.37143
+	|   |   [3] state in Cancerous: MDAMB231 (n = 12, err = 0.0%)
+	|   |   [4] state in Healthy: MCF10A (n = 3, err = 0.0%)
+	|   [5] C14orf132 > 1.37143
+	|   |   [6] IGFBP3 <= 6.2422
+	|   |   |   [7] A2ML1 <= 0.05261: SUM159 (n = 12, err = 0.0%)
+	|   |   |   [8] A2ML1 > 0.05261: MCF7 (n = 2, err = 0.0%)
+	|   |   [9] IGFBP3 > 6.2422: HS578T (n = 13, err = 7.7%)
 
 Time: 0.1 secs
 
