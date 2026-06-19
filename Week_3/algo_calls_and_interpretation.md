@@ -1,4 +1,4 @@
-Call details from C5.0 algorithm
+**Call details from C5.0 algorithm**
 Call:
 C5.0.formula(formula = cell_line ~ ., data = train)
 
@@ -42,3 +42,20 @@ Evaluation on training data (42 cases):
 	 59.52%	MMP17
 
 Time: 0.1 secs
+
+
+
+**Call details from Ranger**
+
+Call:
+ ranger::ranger(x = maybe_data_frame(x), y = y, mtry = min_cols(~floor(sqrt(ncol(train) -      1)), x), num.trees = ~700, importance = ~"permutation", num.threads = 1,      verbose = FALSE, seed = sample.int(10^5, 1), probability = TRUE) 
+
+Type:                             Probability estimation 
+Number of trees:                  700 
+Sample size:                      43 
+Number of independent variables:  498 
+Mtry:                             22 
+Target node size:                 10 
+Variable importance mode:         permutation 
+Splitrule:                        gini 
+OOB prediction error (Brier s.):  0.01271114 
