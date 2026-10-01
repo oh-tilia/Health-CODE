@@ -1,5 +1,5 @@
-# Healthy (epithelial) cells Data base : https://cellxgene.cziscience.com/collections/c9706a92-0e5f-46c1-96d8-20e42467f287
-# Cancer cells Data base : https://cellxgene.cziscience.com/collections/dea97145-f712-431c-a223-6b5f565f362a
+# Healthy (epithelial) cells Database : https://cellxgene.cziscience.com/collections/c9706a92-0e5f-46c1-96d8-20e42467f287
+# Cancer cells Database : https://cellxgene.cziscience.com/collections/dea97145-f712-431c-a223-6b5f565f362a
 
 library(SingleCellExperiment)
 library(SummarizedExperiment)
